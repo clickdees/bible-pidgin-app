@@ -1,0 +1,21 @@
+node_modules/
+.env
+
+# Generated images
+daily-verse.jpg
+test-output.jpg
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# WhatsApp auth
+.wwebjs_auth/
+.wwebjs_cache/
+
+# Editor
+.vscode/
+.idea/
