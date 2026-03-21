@@ -139,8 +139,9 @@ async function createGraphic(data, bgPath, isPidgin) {
     wrapText(ctx, cleanedText, centerX, currentY, img.width - (padding * 2), verseLineHeight);
 
     ctx.font = `30px GaramondCustom`;
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    ctx.fillText(isPidgin ? "Translation: NLT (Pidgin)" : "Translation: NLT", centerX, img.height - 60);
+    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+    ctx.fillText(isPidgin ? "Daily Pidgin Verse" : "Translation: NLT", centerX, img.height - 100);
+
 
     fs.writeFileSync(outputPath, canvas.toBuffer('image/jpeg'));
     return outputPath;
