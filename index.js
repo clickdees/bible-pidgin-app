@@ -19,15 +19,17 @@ const IMAGE_OUTPUT_PG = path.join(__dirname, 'daily-verse-pg.jpg');
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const WHATSAPP_NUMBER = process.env.WHATSAPP_NUMBER + '@c.us';
 
-// Register fonts
+// ──────────────────────────────────────────────────────────────
+// CHANGE THIS TO ANY BIBLEGATEWAY TRANSLATION YOU WANT
+// Supported: MSG, NLT, NIV, KJV, ESV, AMP, TPT, NASB, etc.
+// ──────────────────────────────────────────────────────────────
+const BIBLE_TRANSLATION = 'NLT';   // ←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←←
+
 registerFont(path.join(__dirname, 'fonts/Oswald-SemiBold.ttf'), { family: 'OswaldCustom' });
 registerFont(path.join(__dirname, 'fonts/EBGaramond-Regular.ttf'), { family: 'GaramondCustom' });
 
-const rl = readline.createInterface({
-    input: process.stdin,
-    output: process.stdout
-});
-const ask = (query) => new Promise((resolve) => rl.question(query, resolve));
+const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+const ask = (query) => new Promise(resolve => rl.question(query, resolve));
 
 // ==================== HELPERS ====================
 function cleanJSONResponse(text) {
@@ -59,9 +61,9 @@ async function callLlama(prompt, retries = 5) {
     }
 }
 
-async function getNLTVerse(ref) {
-    console.log(` 📖 Fetching NLT verse: ${ref}`);
-    const url = `https://www.biblegateway.com/passage/?search=${encodeURIComponent(ref)}&version=NLT`;
+async function getBibleVerse(ref) {
+    console.log(` 📖 Fetching ${BIBLE_TRANSLATION} verse: ${ref}`);
+    const url = `https://www.biblegateway.com/passage/?search=${encodeURIComponent(ref)}&version=${BIBLE_TRANSLATION}`;
     const res = await axios.get(url);
     const $ = cheerio.load(res.data);
     let text = '';
@@ -70,7 +72,24 @@ async function getNLTVerse(ref) {
 }
 
 async function translateToPidgin(text) {
-    const prompt = `Translate this Bible verse into clear Nigerian Pidgin (BBC Pidgin style). Return ONLY the translated text. No intro. Keep punctuation.\nVerse: "${text}"`;
+    //   const prompt = `Translate this Bible verse into clear Nigerian Pidgin (BBC Pidgin style). Use authentic BBC Pidgin spelling and grammar. Always try to translate every English word in the sentence into Pidgin.Return ONLY the translated text. No intro. Keep punctuation.\nVerse: "${text}"`;
+//    const prompt = `You are a professional Bible translator for BBC Pidgin and the official Nigerian Pidgin Bible (Salem Egoh style).
+
+//         You have translated hundreds of verses in the exact warm, natural, and powerful BBC Pidgin style that millions of Naija people love and relate to.
+
+//         Translate the verse below into **clear, heartfelt, and spiritually powerful Nigerian Pidgin** exactly as it would be read on BBC Pidgin or in the Pidgin Bible.
+
+//         Rules you MUST follow:
+//         - Use authentic BBC Pidgin spelling and grammar (na, dey, wey, im, dia, bodi, una, wetin etc.)
+//         - Keep the full meaning, emotion, reverence, and power of the original verse
+//         - Make it sound like casual pidgin or broken english
+//         - NEVER add any explanation, intro, quote marks, or extra words
+
+//         Return **ONLY** the Pidgin translation. Nothing else.
+
+//         Verse: "${text}"`;
+    // const prompt = `As a BBC Pidgin Bible translator (Salem Egoh style), translate the verse below into natural, powerful Nigerian Pidgin.      Use authentic Pidgin grammar (e.g., na, dey, wey, im).     Preserve the original's full meaning, emotion, and power.     Return only the raw Pidgin translation.  Verse: "${text}"`
+    const prompt = `Translate this Bible verse into clear Nigerian Pidgin (BBC Pidgin style). Use authentic BBC Pidgin spelling and grammar. Bible terms like "peace", "christ", "mercy" etc do not need translation. Always try to translate every English word in the sentence into Pidgin. Always use "Baba GOD" instead of "Lord". Return ONLY the translated text. Keep punctuation.\nVerse: "${text}"`;  
     console.log(` 🌍 Translating to Naija Pidgin...`);
     const raw = await callLlama(prompt);
     return raw.replace(/"/g, '').trim(); 
@@ -106,7 +125,7 @@ async function createGraphic(data, bgPath, isPidgin) {
     const verseLineHeight = 75;
     const spaceBetween = 50;
 
-    const rawText = isPidgin ? data.pidgin : data.nlt;
+    const rawText = isPidgin ? data.pidgin : data.english;
     const cleanedText = rawText.replace(/^\d+\s*/, '').trim();
     const outputPath = isPidgin ? IMAGE_OUTPUT_PG : IMAGE_OUTPUT_EN;
 
@@ -140,8 +159,7 @@ async function createGraphic(data, bgPath, isPidgin) {
 
     ctx.font = `30px GaramondCustom`;
     ctx.fillStyle = 'rgba(255,255,255,0.7)';
-    ctx.fillText(isPidgin ? "Daily Pidgin Verse" : "Translation: NLT", centerX, img.height - 100);
-
+    ctx.fillText(isPidgin ? `Daily Pidgin Verse (${BIBLE_TRANSLATION})` : `Translation: ${BIBLE_TRANSLATION}`, centerX, img.height - 150);
 
     fs.writeFileSync(outputPath, canvas.toBuffer('image/jpeg'));
     return outputPath;
@@ -173,9 +191,9 @@ async function startApp() {
             case '1':
                 const refInput = await ask('Enter verse in format [Book Chapter:Verse]: ');
                 const ref = refInput.replace(/[\[\]]/g, '').trim();
-                const nltText = await getNLTVerse(ref);
-                const pidginText = await translateToPidgin(nltText);
-                todayData = { ref, nlt: nltText, pidgin: pidginText };
+                const englishText = await getBibleVerse(ref);
+                const pidginText = await translateToPidgin(englishText);
+                todayData = { ref, english: englishText, pidgin: pidginText };
                 break;
 
             case '2':
@@ -183,27 +201,69 @@ async function startApp() {
                 const days = await ask('How many days of content do you need? (e.g. 30): ');
                 const numDays = parseInt(days) || 7;
                 
-                console.log(`🚀 Generating ${numDays} days for "${theme}"...`);
-                const prompt = `Return ONLY a raw JSON array of ${numDays} Bible verses for theme "${theme}". Format: [{"day":1, "ref":"John 3:16"}]`;
+                console.log(`🚀 Generating exactly ${numDays} days for "${theme}"...`);
+
+                // ──────────────────────────────────────────────────────────────
+                // BEST PROMPT — forces Llama to respect the exact number
+                // ──────────────────────────────────────────────────────────────
+                const prompt = `You are a world-class Bible scholar and devotional planner.
+
+                    Create a powerful ${numDays}-day devotional plan for the theme "${theme}".
+
+                    Rules:
+                    - Return EXACTLY ${numDays} verses (no more, no less)
+                    - One verse per day
+                    - Good mix of Old Testament and New Testament
+                    - Maximum variety of books (never repeat the same book more than 2–3 times)
+                    - Logical spiritual journey (foundation → growth → challenge → victory)
+                    - Use only real, correctly formatted references (e.g. "John 3:16", "Psalm 23:1")
+
+                    Return **ONLY** a valid JSON array. No explanation, no extra text, no reasons.
+
+                    [
+                    {"day":1, "ref":"John 3:16"},
+                    {"day":2, "ref":"Psalm 23:1"},
+                    ...
+                    {"day":${numDays}, "ref":"Matthew 6:33"}
+                    ]`;
+
                 const raw = await callLlama(prompt);
                 const verses = JSON.parse(cleanJSONResponse(raw));
 
+                // Safety: never generate more than requested
+                const finalVerses = verses.slice(0, numDays);
+
                 const records = [];
-                for (let i = 0; i < verses.length; i++) {
-                    const v = verses[i];
-                    const n = await getNLTVerse(v.ref);
-                    const p = await translateToPidgin(n);
-                    const d = new Date(); d.setDate(d.getDate() + i);
-                    records.push({ date: d.toLocaleDateString('en-CA'), ref: v.ref, nlt: n, pidgin: p });
-                    console.log(` 💾 Saved Day ${i + 1}/${verses.length}`);
+                for (let i = 0; i < finalVerses.length; i++) {
+                    const v = finalVerses[i];
+                    console.log(` 📖 Fetching ${BIBLE_TRANSLATION} verse: ${v.ref}`);
+                    const eng = await getBibleVerse(v.ref);   // use your current function name
+                    const p = await translateToPidgin(eng);
+                    
+                    const d = new Date(); 
+                    d.setDate(d.getDate() + i);
+                    
+                    records.push({ 
+                        date: d.toLocaleDateString('en-CA'), 
+                        ref: v.ref, 
+                        english: eng, 
+                        pidgin: p 
+                    });
+                    console.log(` 💾 Saved Day ${i + 1}/${numDays}`);
                 }
+
                 const csvWriter = createObjectCsvWriter({
                     path: CSV_PATH,
-                    header: [{id:'date', title:'date'}, {id:'ref', title:'ref'}, {id:'nlt', title:'nlt'}, {id:'pidgin', title:'pidgin'}]
+                    header: [
+                        {id:'date', title:'date'}, 
+                        {id:'ref', title:'ref'}, 
+                        {id:'english', title:'english'}, 
+                        {id:'pidgin', title:'pidgin'}
+                    ]
                 });
                 await csvWriter.writeRecords(records);
-                console.log('✅ CSV Schedule Updated!');
-                todayData = records[0]; // Set first verse to send now
+                console.log(`✅ CSV Schedule Updated with exactly ${numDays} days!`);
+                todayData = records[0]; // send the first one immediately
                 break;
 
             case '3':
@@ -214,7 +274,8 @@ async function startApp() {
                 const rows = [];
                 const stream = fs.createReadStream(CSV_PATH).pipe(csvParser());
                 for await (const row of stream) {
-                    const norm = {}; Object.keys(row).forEach(k => norm[k.toLowerCase()] = row[k]);
+                    const norm = {}; 
+                    Object.keys(row).forEach(k => norm[k.toLowerCase()] = row[k]);
                     rows.push(norm);
                 }
                 todayData = rows.find(r => r.date === todayStr);
@@ -229,12 +290,13 @@ async function startApp() {
         if (todayData) {
             if (!client.info) await new Promise(r => client.once('ready', r));
             const backgrounds = fs.readdirSync(BACKGROUNDS_DIR).filter(f => f.endsWith('.png') || f.endsWith('.jpg'));
+            // console.log('background: ', backgrounds.length);
             const bgPath = path.join(BACKGROUNDS_DIR, backgrounds[Math.floor(Math.random() * backgrounds.length)]);
 
             const en = await createGraphic(todayData, bgPath, false);
             const pg = await createGraphic(todayData, bgPath, true);
 
-            await client.sendMessage(WHATSAPP_NUMBER, MessageMedia.fromFilePath(en), { caption: `📖 ${todayData.ref} (NLT)` });
+            await client.sendMessage(WHATSAPP_NUMBER, MessageMedia.fromFilePath(en), { caption: `📖 ${todayData.ref} (${BIBLE_TRANSLATION})` });
             await client.sendMessage(WHATSAPP_NUMBER, MessageMedia.fromFilePath(pg), { caption: `📖 ${todayData.ref} (Pidgin)` });
             console.log('✅ Sent to WhatsApp!');
         }
